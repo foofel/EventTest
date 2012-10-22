@@ -19,4 +19,24 @@
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="event.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="eventsystem.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="eventcache.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ptrsize.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="connection.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="eventdebuger.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>

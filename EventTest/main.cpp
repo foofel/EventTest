@@ -1,128 +1,33 @@
-#include <iostream>
-#include <vector>
+#include "event.h"
+#include "eventsystem.h"
+#include "eventdebuger.h"
 #include <string>
-#include <map>
-#include <functional>
-#include <deque>
-#include <cstdint>
 #include <chrono>
+#include <iostream>
 
-// should be more awesome 3
-
-//////////////////////////////////////////////////////////////////////////
-
-struct PointerSize
+template<typename T>
+class MyEventBase : public Event<T>
 {
-	static const int value = sizeof(void*);
-};
-
-template<int size>
-struct PointerType
-{
-private:
-	// only valid for 32 and 64 bit builds, so skip everything else
-	typedef void value_type;
-};
-
-template<>
-struct PointerType<4>
-{
-	typedef uint32_t value_type;
-};
-
-template<>
-struct PointerType<8>
-{
-	typedef uint64_t value_type;
-};
-
-//////////////////////////////////////////////////////////////////////////
-
-//#define EVENT_DEBUGGING
-
-#ifdef EVENT_DEBUGGING
-#define EVENT_DEBUG sendLine = __LINE__; \
-	sendFunction = __FUNCTION__; \
-	sendFile = __FILE__; \
-	uuid = "lol-uuid-lol";
-
-#include <sstream>
-#endif
-
-class EventBase
-{
-public:	
-	typedef PointerType<PointerSize::value>::value_type id_type;
-
-	virtual id_type GetId() const = 0;
-
-	virtual ~EventBase() {};
-protected:
-	EventBase() 
-		: data("default")
-	{}
-#ifdef EVENT_DEBUGGING
-	std::string GetDebugMsg()
+public:
+	MyEventBase()
 	{
-		// "EventBase::GetId:(12) in file main.cpp"
-		std::stringstream ss;
-		ss << sendLine;
-		std::string tmp;
-		ss >> tmp;
-		return sendFunction + " in file " + sendFile + "(" + tmp + ")";
 	}
-	int sendLine;
-	std::string sendFunction;
-	std::string sendFile;
-	std::string uuid;
-#endif
+	virtual ~MyEventBase()
+	{
+
+	}
+	std::string GetData() const
+	{
+		return data;
+	}
 	std::string data;
 };
 
-template<typename T>
-class Event : public EventBase
-{
-public:
-	id_type GetId() const
-	{
-		return id;
-	}
-
-	virtual ~Event() 
-	{
-	}
-
-protected:    
-	Event()
-	{
-		//id = s_id();
-		id = s_id2();
-		//std::cout << "ID: " << id << std::endl;
-	}
-private:
-	static id_type s_id2()
-	{
-		static int val = 5;
-		return reinterpret_cast<id_type>(&val);
-	}
-
-	static id_type s_id()
-	{
-		return reinterpret_cast<id_type>(&s_id);
-	}
-
-	id_type id;
-};
-
-class KeyboardEvent : public Event<KeyboardEvent>
+class KeyboardEvent : public MyEventBase<KeyboardEvent>
 {
 public:
 	KeyboardEvent()
 	{
-#ifdef EVENT_DEBUGGING
-		EVENT_DEBUG
-			std::cout << GetDebugMsg() << std::endl;
-#endif
 	}
 
 	KeyboardEvent(const std::string &msg)
@@ -131,15 +36,11 @@ public:
 	}
 };
 
-class MouseEvent : public Event<MouseEvent>
+class MouseEvent : public MyEventBase<MouseEvent>
 {
 public:
 	MouseEvent()
 	{
-#ifdef EVENT_DEBUGGING
-		EVENT_DEBUG
-			std::cout << GetDebugMsg() << std::endl;
-#endif
 	}
 
 	MouseEvent(const std::string &msg)
@@ -148,32 +49,24 @@ public:
 	}
 };
 
-class EngineEvent : public Event<EngineEvent>
+class EngineEvent : public MyEventBase<EngineEvent>
 {
 public:
 	EngineEvent()
 	{
-#ifdef EVENT_DEBUGGING
-		EVENT_DEBUG
-			std::cout << GetDebugMsg() << std::endl;
-#endif
-	}
 
+	}
 	EngineEvent(const std::string &msg)
 	{
 		data = msg;
 	}
 };
 
-class InputEvent : public Event<InputEvent>
+class InputEvent : public MyEventBase<InputEvent>
 {
 public:
 	InputEvent()
 	{
-#ifdef EVENT_DEBUGGING
-		EVENT_DEBUG
-			std::cout << GetDebugMsg() << std::endl;
-#endif
 	}
 
 	InputEvent(const std::string &msg)
@@ -182,15 +75,11 @@ public:
 	}
 };
 
-class DrawEvent : public Event<DrawEvent>
+class DrawEvent : public MyEventBase<DrawEvent>
 {
 public:
 	DrawEvent()
 	{
-#ifdef EVENT_DEBUGGING
-		EVENT_DEBUG
-			std::cout << GetDebugMsg() << std::endl;
-#endif
 	}
 
 	DrawEvent(const std::string &msg)
@@ -201,267 +90,17 @@ public:
 
 //////////////////////////////////////////////////////////////////////////
 
-class ListenerBase
-{
-public:
-	//template <typename T> void call(T *event);
-	virtual void call(EventBase *event) = 0;
-protected:
-	virtual ~ListenerBase() {};
-};
-
-template<class receiver_type, class param_type>
-class Listener : public ListenerBase
-{
-public:
-	
-	typedef std::function<void (const param_type &e)> listener_type;
-	typedef void (receiver_type::*sig_type)(const param_type& e);
-
-	Listener(receiver_type &obj)
-		: listener(std::bind(static_cast<void (receiver_type::*)(const param_type& e)>(&receiver_type::handle_event), obj, std::placeholders::_1)),
-		calledObject(&obj),
-		calledFunction(static_cast<void (receiver_type::*)(const param_type& e)>(&receiver_type::handle_event))
-	{
-
-	}
-
-	Listener(const Listener &other)
-	{
-		if(this != &other)
-		{
-			this->listener = other.listener;
-			this->calledObject = other.calledObject;
-			this->calledFunction = other.calledFunction;
-		}
-	}
-
-	~Listener() { };
-
-	Listener &operator=(const Listener &other)
-	{
-		if(this != &other)
-		{
-			this->listener = other.listener;
-			this->calledObject = other.calledObject;
-			this->calledFunction = other.calledFunction;
-		}
-
-		return *this;
-	}
-
-	void call(EventBase *base)
-	{
-		call(static_cast<param_type*>(base));
-	}
-
-	void call(param_type *mouseEvent)
-	{
-		listener(*mouseEvent);
-	}
-
-	void operator()(const param_type &e)
-	{
-		listener(e);
-	}
-
-	receiver_type *GetReceiver() const
-	{
-		return calledObject;
-	}
-
-	sig_type GetFunctionPointer() const
-	{
-		return calledFunction;
-	}
-private:
-	listener_type listener;
-	receiver_type *calledObject;
-	sig_type calledFunction;
-};
-
-// compare using only object, not the function signatures themselves
-template<typename T, typename U>
-void equals_object(const Listener<T, U> *lhs, const Listener<T, U> *rhs)
-{
-	return lhs->GetReceiver() == rhs->GetReceiver();
-}
-
-// compare using object and function signature
-template<typename T, typename U>
-void equals_sig(const Listener<T, U> *lhs, const Listener<T, U> *rhs)
-{
-	return lhs->GetObject() == rhs->GetObject() && lhs->GetFunctionPointer() == rhs->GetFunctionPointer();
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-class EventCache
-{
-public:
-	EventCache()
-	{
-	}
-
-	~EventCache()
-	{
-		for(auto it = cache.begin(); it != cache.end(); it++)
-		{
-			std::deque<EventBase*> &list = (*it).second;
-
-			for(auto lIt = list.begin(); lIt != list.end(); lIt++)
-			{
-				delete *lIt;
-			}
-		}
-	}
-
-	template<typename T>
-	EventBase *GetEvent(EventBase::id_type type)
-	{
-		std::deque<EventBase*> &list = cache[type];
-		if(list.empty())
-		{
-			list.resize(100);
-			for (size_t i = 0; i < list.size(); i++)
-			{
-				list[i] = new T();
-			}
-			std::cout << "reallocating 100 elements for id: " << type << std::endl;
-		}
-
-		EventBase *elem = list.back();
-		list.pop_back();
-		return elem;
-	}
-
-	void HoldEvent(EventBase *event)
-	{
-		std::deque<EventBase*> &list = cache[event->GetId()];
-		list.push_back(event);
-	}
-
-	template<typename T>
-	const EventBase *PeekEvent(EventBase::id_type type) const
-	{
-		std::deque<EventBase*> &list = cache[type];
-		if(list.empty())
-		{
-			list.resize(100);
-			for (size_t i = 0; i < list.size(); i++)
-			{
-				list[i] = new T();
-			}
-			std::cout << "reallocating 100 elements for id: " << type << std::endl;
-		}
-
-		EventBase *elem = list.back();
-		return elem;
-	}
-private:
-	std::map<EventBase::id_type, std::deque<EventBase*>> cache;
-};
-
-//////////////////////////////////////////////////////////////////////////
-class Connection
-{
-public:
-};
-
-class EventSystem
-{
-public:	
-	//typedef std::function<void (EventBase*)> listener;
-
-	template<typename T, typename U>
-	Connection RegisterListener(const Listener<T, U> &listener)
-	{		
-		// create tmp event to get event id, sadly runtype information
-		// todo: how to nicer? ^^
-		U *event = new U();
-		EventBase::id_type eventId = event->GetId();
-
-		auto it = eventMapping.find(eventId);
-		if(it != eventMapping.end())
-		{
-			// add
-			(*it).second.push_back(new Listener<T, U>(listener));
-		}
-		else
-		{
-			// new
-			std::vector<ListenerBase*> v;
-			v.push_back(new Listener<T, U>(listener));
-			eventMapping.insert(std::make_pair(eventId, v));
-		}
-
-		return Connection();
-	}
-
-	template<typename T, typename U>
-	void RemoveListener(const Listener<T, U> &listener)
-	{
-		U *event = new U();
-		EventBase::id_type eventId = event->GetId();
-		auto it = eventMapping.find(eventId);
-
-		if(it != eventMapping.end())
-		{
-			// check, otherwise empty and nothing to do
-		}
-	}
-
-	template<typename T>
-	void EmmitEvent(const T &e)
-	{
-		T *tmp = static_cast<T*>(eventCache.GetEvent<T>(e.GetId()));
-		eventQueue.push_back(new (tmp) T(e));
-
-		//eventQueue.push_back(new T(e));
-	}
-
-	void ProcessEvents()
-	{
-		for(auto it = eventQueue.begin(); it != eventQueue.end(); it++)
-		{
-			EventBase *event = (*it);
-			std::vector<ListenerBase*> &listeners = eventMapping[event->GetId()];
-			for (auto lIt = listeners.begin(); lIt != listeners.end(); lIt++)
-			{
-				ListenerBase *lb = *lIt;
-				lb->call(event);
-			}
-			// move back into the cache
-			eventCache.HoldEvent(event);
-
-			//delete event;
-		}
-
-		eventQueue.clear();
-	}
-
-	template<class R, class P>
-	static std::function<void (const P &e)> CreateListener(R &r)
-	{
-		return std::bind(static_cast<void (R::*)(const P &e)>(&R::handle_event), r, std::placeholders::_1);
-	}	
-private:
-	EventCache eventCache;
-	std::deque<EventBase*> eventQueue;
-	std::map<EventBase::id_type, std::vector<ListenerBase*>> eventMapping;
-};
-
 class SpaceShip
 {
 public:
 	void handle_event(const KeyboardEvent &e)
 	{
-		//std::cout << "KeyboardEvent: " << e.GetMessage() << std::endl;
+		std::cout << "KeyboardEvent: " << e.GetData() << std::endl;
 	}
 
 	void handle_event(const MouseEvent &e)
 	{
-		//std::cout << "MouseEvent: " << e.GetMessage() << std::endl;
+		std::cout << "MouseEvent: " << e.GetData() << std::endl;
 	}	
 };
 
@@ -470,12 +109,12 @@ class RoboCop
 public:
 	void handle_event(const EngineEvent &e)
 	{
-		//std::cout << "EngineEvent: " << "null" << std::endl;
+		std::cout << "EngineEvent: " << e.GetData() << std::endl;
 	}
 
 	void handle_event(const MouseEvent &e)
 	{
-		//std::cout << "MouseEvent: " << e.GetMessage() << std::endl;
+		std::cout << "MouseEvent: " << e.GetData() << std::endl;
 	}	
 };
 
@@ -484,12 +123,13 @@ class NinjaPirateCyborgJesus
 public:
 	void handle_event(const InputEvent &e)
 	{
-		//std::cout << "InputEvent: " << "null" << std::endl;
+		std::cout << "InputEvent: " << e.GetData() << std::endl;
 	}
 
 	void handle_event(const DrawEvent &e)
 	{
-		//std::cout << "DrawEvent: " << "null" << std::endl;
+		std::cout << "DrawEvent: " << e.GetData() << std::endl;
+		std::cout << EventDebugger::inspect(e) << std::endl;
 	}	
 };
 
@@ -501,62 +141,83 @@ int main()
 	RoboCop rc;
 	NinjaPirateCyborgJesus npcj;
 
-	Listener<SpaceShip, KeyboardEvent> testCon(ss);
-	es.RegisterListener(testCon);
-	es.RemoveListener(testCon);
-	es.RegisterListener(Listener<SpaceShip, MouseEvent>(ss));
+	Connection<NinjaPirateCyborgJesus, DrawEvent> testCon(npcj);
 
-	es.RegisterListener(Listener<RoboCop, EngineEvent>(rc));
-	es.RegisterListener(Listener<RoboCop, MouseEvent>(rc));
+	// reach
+	es.RegisterListener(testCon);
+	es.EmmitEvent(KeyboardEvent("registred1 (reach)"));
+	es.EmmitEvent(DrawEvent("registred2 (reach)"));
+	es.ProcessEvents();
+	// no reach
+	es.RemoveListener(testCon);
+	es.EmmitEvent(KeyboardEvent("un registred1 (no reach)"));
+	es.ProcessEvents();
+	// reach
+	es.RegisterListener(testCon);
+	es.EmmitEvent(KeyboardEvent("un registred2 (should reach)"));
+	// preocess
+	es.ProcessEvents();
+
+	return 0;
+
+
+	es.RegisterListener(Connection<SpaceShip, MouseEvent>(ss));
+
+	es.RegisterListener(Connection<RoboCop, EngineEvent>(rc));
+	es.RegisterListener(Connection<RoboCop, MouseEvent>(rc));
 
 	// geht nicht! compiletime error :)
-	// es.RegisterListener(Listener<RoboCop, DrawEvent>(rc));
+	//es.RegisterListener(Connection<RoboCop, DrawEvent>(rc));
 
-	es.RegisterListener(Listener<NinjaPirateCyborgJesus, InputEvent>(npcj));
-	es.RegisterListener(Listener<NinjaPirateCyborgJesus, DrawEvent>(npcj));
+	es.RegisterListener(Connection<NinjaPirateCyborgJesus, InputEvent>(npcj));
+	es.RegisterListener(Connection<NinjaPirateCyborgJesus, DrawEvent>(npcj));
 
-	Listener<NinjaPirateCyborgJesus, DrawEvent> callable(npcj);
+	return 0;
+
+	Connection<NinjaPirateCyborgJesus, DrawEvent> callable(npcj);
 	callable(DrawEvent("muh"));
 
-	typedef std::chrono::high_resolution_clock Clock;
-	typedef std::chrono::duration<double> sec;
-	Clock::time_point start = Clock::now();
-	int counter = 0;
-	const int runs = 5000;
-	for (int i = 0; i < runs; i++)
-	{
-		const int eventCount = rand() % 5000;
-		for (int k = 0; k < eventCount; k++)
-		{
-			const int eventType = rand() % 5;
-			switch (eventType)
-			{
-			case 0:
-				es.EmmitEvent(MouseEvent("created"));
-				break;
-			case 1:
-				es.EmmitEvent(KeyboardEvent("created"));
-				break;
-			case 2:
-				es.EmmitEvent(EngineEvent("created"));
-				break;
-			case 3:
-				es.EmmitEvent(InputEvent("created"));
-				break;
-			case 4:
-				es.EmmitEvent(DrawEvent("created"));
-				break;
-			default:
-				break;
-			}
-			counter++;
-		}
-		es.ProcessEvents();
-	}
 
-	Clock::time_point end = Clock::now();
-	std::cout << std::fixed << "send : " << counter << " events (" << (int)(counter / sec(end - start).count()) << " e\\s)" << std::endl;
 }
+
+/*typedef std::chrono::high_resolution_clock Clock;
+typedef std::chrono::duration<double> sec;
+Clock::time_point start = Clock::now();
+int counter = 0;
+const int runs = 5000;
+for (int i = 0; i < runs; i++)
+{
+	const int eventCount = rand() % 5000;
+	for (int k = 0; k < eventCount; k++)
+	{
+		const int eventType = rand() % 5;
+		switch (eventType)
+		{
+		case 0:
+			es.EmmitEvent(MouseEvent("created"));
+			break;
+		case 1:
+			es.EmmitEvent(KeyboardEvent("created"));
+			break;
+		case 2:
+			es.EmmitEvent(EngineEvent("created"));
+			break;
+		case 3:
+			es.EmmitEvent(InputEvent("created"));
+			break;
+		case 4:
+			es.EmmitEvent(DrawEvent("created"));
+			break;
+		default:
+			break;
+		}
+		counter++;
+	}
+	es.ProcessEvents();
+}
+
+Clock::time_point end = Clock::now();
+std::cout << std::fixed << "send : " << counter << " events (" << (int)(counter / sec(end - start).count()) << " e\\s)" << std::endl;*/
 
 /*
 #include <iostream>

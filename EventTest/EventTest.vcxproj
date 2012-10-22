@@ -81,6 +81,14 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="connection.h" />
+    <ClInclude Include="event.h" />
+    <ClInclude Include="eventcache.h" />
+    <ClInclude Include="eventdebuger.h" />
+    <ClInclude Include="eventsystem.h" />
+    <ClInclude Include="ptrsize.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
