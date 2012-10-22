@@ -25,6 +25,7 @@ public:
 	}
 
 	template<typename T>
+	// returns a object, ownership transfer
 	EventBase *GetEvent(EventBase::id_type type)
 	{
 		std::deque<EventBase*> &list = cache[type];
@@ -43,28 +44,30 @@ public:
 		return elem;
 	}
 
-	void HoldEvent(EventBase *event)
-	{
-		std::deque<EventBase*> &list = cache[event->GetId()];
-		list.push_back(event);
-	}
-
 	template<typename T>
+	// returns a pointer, no ownership transfer!
 	const EventBase *PeekEvent(EventBase::id_type type) const
 	{
 		std::deque<EventBase*> &list = cache[type];
 		if(list.empty())
 		{
-			list.resize(100);
+			//TODO: reallocation policy?
+			list.resize(25);
 			for (size_t i = 0; i < list.size(); i++)
 			{
 				list[i] = new T();
 			}
-			std::cout << "reallocating 100 elements for id: " << type << std::endl;
 		}
 
 		EventBase *elem = list.back();
 		return elem;
+	}
+
+	// moves an object back into the cache
+	void HoldEvent(EventBase *event)
+	{
+		std::deque<EventBase*> &list = cache[event->GetId()];
+		list.push_back(event);
 	}
 private:
 	std::map<EventBase::id_type, std::deque<EventBase*>> cache;

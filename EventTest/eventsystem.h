@@ -8,16 +8,26 @@
 #include <deque>
 #include <vector>
 
+template<typename T>
+class IDLookup
+{
+public:
+	static EventBase::id_type GetId()
+	{
+		// create object to get event id, sadly runtype information
+		static T event;
+		EventBase::id_type eventId = event.GetId();
+		return eventId;
+	}
+};
+
 class EventSystem
 {
 public:	
 	template<typename T, typename U>
-	void RegisterListener(const Connection<T, U> &listener)
+	void Add(const Connection<T, U> &listener)
 	{		
-		// create tmp event to get event id, sadly runtype information
-		// todo: how to nicer? ^^
-		U *event = new U();
-		EventBase::id_type eventId = event->GetId();
+		EventBase::id_type eventId = IDLookup<U>::GetId();
 
 		auto it = eventMapping.find(eventId);
 		if(it != eventMapping.end())
@@ -35,10 +45,9 @@ public:
 	}
 
 	template<typename T, typename U>
-	void RemoveListener(const Connection<T, U> &listener)
+	void Remove(const Connection<T, U> &listener)
 	{
-		U *event = new U();
-		EventBase::id_type eventId = event->GetId();
+		EventBase::id_type eventId = IDLookup<U>::GetId();
 
 		auto it = eventMapping.find(eventId);
 		if(it != eventMapping.end())
@@ -49,6 +58,8 @@ public:
 				// check, otherwise empty and nothing to do
 				if(equals_sig(&listener, static_cast<Connection<T, U>*>(*lIt)))
 				{
+					ConnectionBase *con = *lIt; //static_cast<Connection<T, U>*>(*lIt);
+					delete con;
 					lIt = listeners.erase(lIt);
 				}
 				else
@@ -60,16 +71,15 @@ public:
 	}
 
 	template<typename T>
-	void EmmitEvent(const T &e)
+	void Emit(const T &e)
 	{
+		// get element from cache
 		T *tmp = static_cast<T*>(eventCache.GetEvent<T>(e.GetId()));
+		// placement new
 		eventQueue.push_back(new (tmp) T(e));
-
-		//eventQueue.push_back(new T(e));
 	}
 
-
-	void ProcessEvents()
+	void Process()
 	{
 		for(auto it = eventQueue.begin(); it != eventQueue.end(); it++)
 		{
@@ -82,18 +92,10 @@ public:
 			}
 			// move back into the cache
 			eventCache.HoldEvent(event);
-
-			//delete event;
 		}
 
 		eventQueue.clear();
 	}
-
-	template<class R, class P>
-	static std::function<void (const P &e)> CreateListener(R &r)
-	{
-		return std::bind(static_cast<void (R::*)(const P &e)>(&R::handle_event), r, std::placeholders::_1);
-	}	
 private:
 	EventCache eventCache;
 	std::deque<EventBase*> eventQueue;

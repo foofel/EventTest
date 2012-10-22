@@ -1,10 +1,10 @@
 #include "event.h"
 #include "eventsystem.h"
-#include "eventdebuger.h"
 #include <string>
 #include <chrono>
 #include <iostream>
 
+//gotcha: the event base class MUST! be a template type, otherwise the static id trick doesn't work and all events get the same id
 template<typename T>
 class MyEventBase : public Event<T>
 {
@@ -129,7 +129,6 @@ public:
 	void handle_event(const DrawEvent &e)
 	{
 		std::cout << "DrawEvent: " << e.GetData() << std::endl;
-		std::cout << EventDebugger::inspect(e) << std::endl;
 	}	
 };
 
@@ -143,34 +142,38 @@ int main()
 
 	Connection<NinjaPirateCyborgJesus, DrawEvent> testCon(npcj);
 
+
 	// reach
-	es.RegisterListener(testCon);
-	es.EmmitEvent(KeyboardEvent("registred1 (reach)"));
-	es.EmmitEvent(DrawEvent("registred2 (reach)"));
-	es.ProcessEvents();
+	es.Add(Connection<NinjaPirateCyborgJesus, InputEvent>(npcj));
+	es.Add(testCon);
+	es.Emit(KeyboardEvent("KeyboardEvent (no reach)"));
+	es.Emit(DrawEvent("DrawEvent (reach)"));
+	es.Process();
 	// no reach
-	es.RemoveListener(testCon);
-	es.EmmitEvent(KeyboardEvent("un registred1 (no reach)"));
-	es.ProcessEvents();
+	es.Remove(testCon);
+	es.Emit(KeyboardEvent("KeyboardEvent (no reach)"));
+	es.Emit(DrawEvent("DrawEvent (no reach)"));
+	es.Process();
 	// reach
-	es.RegisterListener(testCon);
-	es.EmmitEvent(KeyboardEvent("un registred2 (should reach)"));
+	es.Add(testCon);
+	es.Emit(DrawEvent("DrawEvent (reach)"));
+	es.Emit(InputEvent("InputEvent (reach)"));
 	// preocess
-	es.ProcessEvents();
+	es.Process();
 
 	return 0;
 
 
-	es.RegisterListener(Connection<SpaceShip, MouseEvent>(ss));
+	es.Add(Connection<SpaceShip, MouseEvent>(ss));
 
-	es.RegisterListener(Connection<RoboCop, EngineEvent>(rc));
-	es.RegisterListener(Connection<RoboCop, MouseEvent>(rc));
+	es.Add(Connection<RoboCop, EngineEvent>(rc));
+	es.Add(Connection<RoboCop, MouseEvent>(rc));
 
 	// geht nicht! compiletime error :)
 	//es.RegisterListener(Connection<RoboCop, DrawEvent>(rc));
 
-	es.RegisterListener(Connection<NinjaPirateCyborgJesus, InputEvent>(npcj));
-	es.RegisterListener(Connection<NinjaPirateCyborgJesus, DrawEvent>(npcj));
+	es.Add(Connection<NinjaPirateCyborgJesus, InputEvent>(npcj));
+	es.Add(Connection<NinjaPirateCyborgJesus, DrawEvent>(npcj));
 
 	return 0;
 

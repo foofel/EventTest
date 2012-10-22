@@ -35,8 +35,5 @@
     <ClInclude Include="connection.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="eventdebuger.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

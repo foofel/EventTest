@@ -8,7 +8,6 @@ class ConnectionBase
 public:
 	//template <typename T> void call(T *event);
 	virtual void call(EventBase *event) = 0;
-protected:
 	virtual ~ConnectionBase() {};
 };
 
@@ -16,7 +15,6 @@ template<class receiver_type, class param_type>
 class Connection : public ConnectionBase
 {
 public:
-
 	typedef std::function<void (const param_type &e)> listener_type;
 	typedef void (receiver_type::*sig_type)(const param_type& e);
 

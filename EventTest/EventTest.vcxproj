@@ -85,7 +85,6 @@
     <ClInclude Include="connection.h" />
     <ClInclude Include="event.h" />
     <ClInclude Include="eventcache.h" />
-    <ClInclude Include="eventdebuger.h" />
     <ClInclude Include="eventsystem.h" />
     <ClInclude Include="ptrsize.h" />
   </ItemGroup>
