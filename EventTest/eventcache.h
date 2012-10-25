@@ -4,6 +4,8 @@
 #include <map>
 #include <deque>
 
+namespace es {
+
 class EventCache
 {
 public:
@@ -26,13 +28,15 @@ public:
 
 	template<typename T>
 	// returns a object, ownership transfer
-	EventBase *GetEvent(EventBase::id_type type)
+	//TODO: make a specialisation for the null event, there doessn't need to be a cache for is
+	//(or is that an optimisation like vector<bool>?)
+	EventBase *FetchEvent(EventBase::id_type type)
 	{
 		std::deque<EventBase*> &list = cache[type];
 		if(list.empty())
 		{
 			//TODO: whats a good allocation rule?
-			list.resize(1);
+			list.resize(100);
 			for (size_t i = 0; i < list.size(); i++)
 			{
 				list[i] = new T();
@@ -63,8 +67,8 @@ public:
 		return elem;
 	}
 
-	// moves an object back into the cache
-	void HoldEvent(EventBase *event)
+	// moves an object back into the cache, ownership transfer
+	void ReturnEvent(EventBase *event)
 	{
 		std::deque<EventBase*> &list = cache[event->GetId()];
 		list.push_back(event);
@@ -72,3 +76,5 @@ public:
 private:
 	std::map<EventBase::id_type, std::deque<EventBase*>> cache;
 };
+
+}; // namespace

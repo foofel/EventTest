@@ -1,7 +1,9 @@
 #pragma once
+
 #include "ptrsize.h"
 
-class EventDebugger;
+namespace es {
+
 class EventBase
 {
 public:
@@ -35,3 +37,23 @@ private:
 
 	id_type id;
 };
+
+class NullEvent : public Event<NullEvent>
+{
+
+};
+
+/*
+// null event alternatvive, has a statically defined it
+struct NullEvent : public EventBase
+{
+	// lets assume that no sane system offers 0 as valid pointer position
+	static const int id = 0x0;
+
+	EventBase::id_type GetId() const
+	{
+		return id;
+	}
+};*/
+
+}; // namespace

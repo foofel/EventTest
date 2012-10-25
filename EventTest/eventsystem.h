@@ -8,6 +8,8 @@
 #include <deque>
 #include <vector>
 
+namespace es {
+
 template<typename T>
 class IDLookup
 {
@@ -74,7 +76,7 @@ public:
 	void Emit(const T &e)
 	{
 		// get element from cache
-		T *tmp = static_cast<T*>(eventCache.GetEvent<T>(e.GetId()));
+		T *tmp = static_cast<T*>(eventCache.FetchEvent<T>(e.GetId()));
 		// placement new
 		eventQueue.push_back(new (tmp) T(e));
 	}
@@ -91,7 +93,7 @@ public:
 				lb->call(event);
 			}
 			// move back into the cache
-			eventCache.HoldEvent(event);
+			eventCache.ReturnEvent(event);
 		}
 
 		eventQueue.clear();
@@ -101,3 +103,5 @@ private:
 	std::deque<EventBase*> eventQueue;
 	std::map<EventBase::id_type, std::vector<ConnectionBase*>> eventMapping;
 };
+
+}; // namespace

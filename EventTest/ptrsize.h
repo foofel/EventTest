@@ -1,5 +1,6 @@
 #pragma once
-#include <cstdint>
+
+namespace es {
 
 struct PointerSize
 {
@@ -11,17 +12,19 @@ struct PointerType
 {
 private:
 	// only valid for 32 and 64 bit builds, so skip everything else
-	typedef void value_type;
+	typedef char value_type;
 };
 
 template<>
 struct PointerType<4>
 {
-	typedef uint32_t value_type;
+	typedef unsigned int value_type;
 };
 
 template<>
 struct PointerType<8>
 {
-	typedef uint64_t value_type;
+	typedef unsigned long long value_type;
 };
+
+}; //namespace
