@@ -15,20 +15,8 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="event.h">
+    <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="eventsystem.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="eventcache.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ptrsize.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="connection.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
+    </ClCompile>
   </ItemGroup>
 </Project>

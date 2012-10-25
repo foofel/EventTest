@@ -1,5 +1,4 @@
-#include "event.h"
-#include "eventsystem.h"
+#include "../EventTest/eventsystem.h"
 #include <string>
 #include <chrono>
 #include <iostream>
@@ -27,10 +26,20 @@ protected:
 	std::string data;
 };
 
+// simply a shallow copy example
+struct uh_uh
+{
+	uh_uh(const std::string &init)
+		: only_one(init)
+	{}
+	std::string only_one;
+};
+
 class KeyboardEvent : public MyEventBase<KeyboardEvent>
 {
 public:
 	KeyboardEvent()
+		: key_code('a'), uh(0)
 	{
 	}
 
@@ -38,12 +47,22 @@ public:
 	{
 		data = msg;
 	}
+
+	KeyboardEvent(const std::string &msg, const uh_uh *oh)
+		: key_code('a'), uh(oh)
+	{
+		data = msg;
+	}
+
+	int key_code;
+	const uh_uh *uh;
 };
 
 class MouseEvent : public MyEventBase<MouseEvent>
 {
 public:
 	MouseEvent()
+		: x(-50), y(50)
 	{
 	}
 
@@ -51,12 +70,17 @@ public:
 	{
 		data = msg;
 	}
+
+	int x;
+	int y;
 };
 
 class EngineEvent : public MyEventBase<EngineEvent>
 {
 public:
 	EngineEvent()
+		: name("super engine"),
+		value(+9001)
 	{
 
 	}
@@ -64,6 +88,9 @@ public:
 	{
 		data = msg;
 	}
+
+	std::string name;
+	int value;
 };
 
 class InputEvent : public MyEventBase<InputEvent>
@@ -83,23 +110,8 @@ public:
 
 	}
 
-	InputEvent(const InputEvent &other)
-	{
-		if(this != &other)
-		{
-			data = other.data;
-		}
-	}
-
-	InputEvent &operator=(const InputEvent &other)
-	{
-		if(this != &other)
-		{
-			data = other.data;
-		}
-
-		return *this;
-	}
+	int mouse_button;
+	int down;
 };
 
 class DrawEvent : public MyEventBase<DrawEvent>
@@ -113,6 +125,8 @@ public:
 	{
 		data = msg;
 	}
+
+	bool something_important;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -122,12 +136,12 @@ class SpaceShip
 public:
 	void handle_event(const KeyboardEvent &e)
 	{
-		//std::cout << "KeyboardEvent: " << e.GetData() << std::endl;
+		std::cout << "KeyboardEvent: " << e.GetData() << std::endl;
 	}
 
 	void handle_event(const MouseEvent &e)
 	{
-		//std::cout << "MouseEvent: " << e.GetData() << std::endl;
+		std::cout << "MouseEvent: " << e.GetData() << std::endl;
 	}	
 };
 
@@ -136,12 +150,12 @@ class RoboCop
 public:
 	void handle_event(const EngineEvent &e)
 	{
-		//std::cout << "EngineEvent: " << e.GetData() << std::endl;
+		std::cout << "EngineEvent: " << e.GetData() << std::endl;
 	}
 
 	void handle_event(const MouseEvent &e)
 	{
-		//std::cout << "MouseEvent: " << e.GetData() << std::endl;
+		std::cout << "MouseEvent: " << e.GetData() << std::endl;
 	}	
 };
 
@@ -160,7 +174,7 @@ public:
 
 	void handle_event()
 	{
-		std::cout << "NullEvent" << std::endl;
+		std::cout << "NullEvent (no data)" << std::endl;
 	}
 
 	void muh_handle(const InputEvent &e)
@@ -182,22 +196,32 @@ int main()
 	// create a connection between a class and an event
 	es::Connection<NinjaPirateCyborgJesus, DrawEvent> testCon(npcj, &NinjaPirateCyborgJesus::handle_event);
 
-	// reach
+	// some examples, but its pretty intuitive:
+	// 1. you create connections and register them
+	// 2. you send some events
+	// 3. call the process function
+	// what you need to keep in mind is: events are not ordered into buckets when saved but are dispatched 
+	// (therefore checked) when the processfunction is called, means if you send 10 events, afterwards register a connection
+	// for that event type and then process, still all events will reach that event handler!
+	// The same hapens with unregister/send/register. imagine the flow: <unregister connection> <send event> <register connection> <process>, the event will
+	// not know that our connection was unregistered during its emit and will still fire.
 	es.Add(es::Connection<NinjaPirateCyborgJesus, InputEvent>(npcj, &NinjaPirateCyborgJesus::handle_event));
+	es.Add(es::Connection<RoboCop, EngineEvent>(rc, &RoboCop::handle_event));
 	es.Add(testCon);
 	es.Emit(KeyboardEvent("KeyboardEvent (no reach)"));
 	es.Emit(DrawEvent("DrawEvent (reach)"));
 	es.Process();
-	// no reach
+
 	es.Remove(testCon);
 	es.Emit(KeyboardEvent("KeyboardEvent (no reach)"));
 	es.Emit(DrawEvent("DrawEvent (no reach)"));
 	es.Process();
-	// reach
+
 	es.Add(testCon);
+	es.Add(es::Connection<SpaceShip, KeyboardEvent>(ss, &SpaceShip::handle_event));
 	es.Emit(DrawEvent("DrawEvent (reach)"));
 	es.Emit(InputEvent("InputEvent (reach)"));
-	// preocess
+	es.Emit(KeyboardEvent("KeyboardEvent (reach)", new uh_uh("hello :)")));
 	es.Process();
 
 	// shortcut for binding
@@ -212,62 +236,9 @@ int main()
 	es.Emit(es::NullEvent());
 	es.Process();
 
-	// error: no signature matches
+	// error: no signature matches (our cyborg ninja cant handle keyboard events :/)
 	//es::Connection<NinjaPirateCyborgJesus, KeyboardEvent> failCon(npcj, &NinjaPirateCyborgJesus::handle_event);
 	//failCon(KeyboardEvent("muh"));
 }
 
-/*
-int main()
-{
-	es.Add(Connection<SpaceShip, MouseEvent, &SpaceShip::handle_event>(ss));
-	es.Add(Connection<RoboCop, EngineEvent, &RoboCop::handle_event>(rc));
-	es.Add(Connection<RoboCop, MouseEvent, &RoboCop::handle_event>(rc));
 
-	// geht nicht! compiletime error :)
-	//es.RegisterListener(Connection<RoboCop, DrawEvent>(rc));
-	
-	typedef std::chrono::high_resolution_clock Clock;
-	typedef std::chrono::duration<double> sec;
-	Clock::time_point start = Clock::now();
-	int counter = 0;
-	const int runs = 5000;
-	for (int i = 0; i < runs; i++)
-	{
-		const int eventCount = rand() % 5000;
-		for (int k = 0; k < eventCount; k++)
-		{
-			const int eventType = rand() % 5;
-			switch (eventType)
-			{
-			case 0:
-				es.Emit(NullEvent());
-				break;
-			case 1:
-				es.Emit(NullEvent());
-				break;
-			case 2:
-				es.Emit(NullEvent());
-				break;
-			case 3:
-				es.Emit(NullEvent());
-				break;
-			case 4:
-				es.Emit(NullEvent());
-				break;
-			default:
-				break;
-			}
-			counter++;
-		}
-		es.Process();
-	}
-
-	Clock::time_point end = Clock::now();
-	double eventsPerSecond = (int)(counter / sec(end - start).count());
-	double timePerEventMilli = (1./eventsPerSecond) * 1000 * 1000 * 1000;
-	std::cout << std::fixed << std::setprecision(8) << "send : " << counter << " events (" << (int)eventsPerSecond << " e\\s, " << timePerEventMilli << "ns)" << std::endl;
-
-	return 0;
-}
-}*/
