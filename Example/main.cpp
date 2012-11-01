@@ -136,12 +136,12 @@ class SpaceShip
 public:
 	void handle_event(const KeyboardEvent &e)
 	{
-		std::cout << "KeyboardEvent: " << e.GetData() << std::endl;
+		std::cout << "SpaceShip::KeyboardEvent: " << e.GetData() << std::endl;
 	}
 
 	void handle_event(const MouseEvent &e)
 	{
-		std::cout << "MouseEvent: " << e.GetData() << std::endl;
+		std::cout << "SpaceShip::MouseEvent: " << e.GetData() << std::endl;
 	}	
 };
 
@@ -150,12 +150,12 @@ class RoboCop
 public:
 	void handle_event(const EngineEvent &e)
 	{
-		std::cout << "EngineEvent: " << e.GetData() << std::endl;
+		std::cout << "RoboCop::EngineEvent: " << e.GetData() << std::endl;
 	}
 
 	void handle_event(const MouseEvent &e)
 	{
-		std::cout << "MouseEvent: " << e.GetData() << std::endl;
+		std::cout << "RoboCop::MouseEvent: " << e.GetData() << std::endl;
 	}	
 };
 
@@ -164,22 +164,22 @@ class NinjaPirateCyborgJesus
 public:
 	void handle_event(const InputEvent &e)
 	{
-		std::cout << "InputEvent: " << e.GetData() << std::endl;
+		std::cout << "NinjaPirateCyborgJesus::InputEvent: " << e.GetData() << std::endl;
 	}
 
 	void handle_event(const DrawEvent &e)
 	{
-		std::cout << "DrawEvent: " << e.GetData() << std::endl;
+		std::cout << "NinjaPirateCyborgJesus::DrawEvent: " << e.GetData() << std::endl;
 	}
 
 	void handle_event()
 	{
-		std::cout << "NullEvent (no data)" << std::endl;
+		std::cout << "NinjaPirateCyborgJesus::NullEvent (no data)" << std::endl;
 	}
 
 	void muh_handle(const InputEvent &e)
 	{
-		std::cout << "InputEvent: " << e.GetData() << std::endl;
+		std::cout << "NinjaPirateCyborgJesus::InputEvent: " << e.GetData() << std::endl;
 	}
 };
 
@@ -236,6 +236,22 @@ int main()
 	es.Emit(es::NullEvent());
 	es.Process();
 
+	struct Test
+	{
+		Test(es::EventSystem &es)
+		{
+			es.Add(es::bind(*this, &Test::handle_event));
+		}
+
+		void handle_event(const DrawEvent &e)
+		{
+			std::cout << "Test::DrawEvent: " << e.GetData() << std::endl;
+
+		}
+	};
+	Test t(es);
+	es.Emit(DrawEvent("(reach)"));
+	es.Process();
 	// error: no signature matches (our cyborg ninja cant handle keyboard events :/)
 	//es::Connection<NinjaPirateCyborgJesus, KeyboardEvent> failCon(npcj, &NinjaPirateCyborgJesus::handle_event);
 	//failCon(KeyboardEvent("muh"));
